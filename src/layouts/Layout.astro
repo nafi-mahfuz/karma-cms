@@ -1,0 +1,12 @@
+---
+interface Props { title?: string; description?: string }
+const { title = 'The journal', description = 'Thoughts, stories, and things worth sharing.' } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={description} /><link rel="icon" href="/favicon.svg" /><title>{title}</title></head>
+  <body><header><a href="/">The journal<span>✳</span></a><span>Thoughtfully written.</span></header><main><slot /></main><footer>A collection of ideas, one page at a time.</footer></body>
+</html>
+<style is:global>
+  *{box-sizing:border-box}body{margin:0;background:#faf9f6;color:#242a26;font-family:system-ui,sans-serif}header,main,footer{max-width:940px;margin:auto;padding:32px}header{display:flex;justify-content:space-between;border-bottom:1px solid #dedfd7}header a{font-size:22px;font-weight:750;text-decoration:none;color:inherit}header a span{color:#52744a;margin-left:12px}header>span,footer{color:#777e74;font-size:13px}main{min-height:75vh;padding-top:70px}h1{font-family:Georgia,serif;font-size:clamp(36px,6vw,62px);font-weight:400;letter-spacing:-2px;line-height:1.12}a{color:#45633d}p,li{line-height:1.8}article{max-width:740px}article img{max-width:100%}pre{padding:20px;overflow:auto}blockquote{border-left:3px solid #789369;padding-left:22px;color:#687060}footer{border-top:1px solid #dedfd7}
+</style>

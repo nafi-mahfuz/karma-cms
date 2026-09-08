@@ -1,0 +1,7 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort((a,b) => b.data.pubDate.valueOf()-a.data.pubDate.valueOf());
+---
+<Layout><p class="eyebrow">NOTES FROM THE EVERYDAY</p><h1>Ideas worth<br />putting into words.</h1><p class="intro">Thoughts, stories, and things worth sharing.</p><section>{posts.map(post => <a class="post" href={`/blog/${post.id}/`}><time>{post.data.pubDate.toLocaleDateString('en-US',{timeZone:'UTC',month:'long',day:'numeric',year:'numeric'})}</time><h2>{post.data.title}</h2><p>{post.data.description}</p><span>Read story ↗</span></a>)}</section></Layout>
+<style>.eyebrow{font-size:11px;letter-spacing:2px;color:#58734c}.intro{color:#777e74;margin-bottom:60px}.post{display:block;text-decoration:none;color:inherit;border-top:1px solid #dedfd7;padding:30px 0}.post time{font-size:12px;color:#777e74}.post h2{font-family:Georgia,serif;font-size:30px;font-weight:400}.post p{color:#777e74}.post span{font-size:13px;color:#52744a}</style>
