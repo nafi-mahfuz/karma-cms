@@ -1,10 +1,10 @@
 ---
-interface Props { title?: string; description?: string }
-const { title = 'The journal', description = 'Thoughts, stories, and things worth sharing.' } = Astro.props;
+interface Props { title?: string; description?: string; noindex?: boolean }
+const { noindex = false, title = 'The journal', description = 'Thoughts, stories, and things worth sharing.' } = Astro.props;
 ---
 <!doctype html>
 <html lang="en">
-  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={description} /><link rel="icon" href="/favicon.svg" /><title>{title}</title></head>
+  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><meta name="description" content={description} /><link rel="icon" href="/favicon.svg" /><title>{title}</title>{noindex && <meta name="robots" content="noindex, nofollow" />}</head>
   <body><header><a href="/">The journal<span>✳</span></a><span>Thoughtfully written.</span></header><main><slot /></main><footer>A collection of ideas, one page at a time.</footer></body>
 </html>
 <style is:global>

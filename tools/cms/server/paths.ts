@@ -2,7 +2,7 @@ import { promises as fs, constants } from 'node:fs';
 import path from 'node:path';
 
 export class PathError extends Error {}
-export interface CmsConfig { contentDir: string; mediaDir: string; siteUrl: string }
+export interface CmsConfig { contentDir: string; mediaDir: string; siteUrl: string; previewPath?: string }
 
 export async function assertDirectory(directory: string, label: string) {
   let current = path.parse(path.resolve(directory)).root;

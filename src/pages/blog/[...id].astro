@@ -2,10 +2,10 @@
 import { getCollection, render } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const posts = await getCollection('blog', ({ data }) => import.meta.env.DEV || !data.draft);
   return posts.map(post => ({ params: { id: post.id }, props: { post } }));
 }
 const { post } = Astro.props;
 const { Content } = await render(post);
 ---
-<Layout title={post.data.title} description={post.data.description}><article><a href="/">← All stories</a><h1>{post.data.title}</h1><p>{post.data.description}</p><time>{post.data.pubDate.toISOString().slice(0,10)}</time><hr /><Content /></article></Layout>
+<Layout title={post.data.seoTitle || post.data.title} description={post.data.metaDescription || post.data.description} noindex={post.data.draft}><article>{post.data.draft && <p class="preview-notice">Draft preview · Only available in the local Astro development server.</p>}<a href="/">← All stories</a><h1>{post.data.title}</h1><p>{post.data.description}</p><time>{post.data.pubDate.toISOString().slice(0,10)}</time>{post.data.featuredImage && <img src={post.data.featuredImage} alt={post.data.featuredImageAlt} />}<hr /><Content /></article></Layout>

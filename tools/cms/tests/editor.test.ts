@@ -1,0 +1,30 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { PostStore } from '../server/store';
+import { slugify, prepareArticle, articleError, previewUrl } from '../lib/editor';
+const article={id:'story',slug:'a-story',title:'A story',description:'Intro',pubDate:'2026-09-08',draft:true,tags:[],body:'A **story**.'};
+test('slug generation, publishing validation, tag normalization and preview URLs',()=>{
+  assert.equal(slugify('  Café: A new beginning!  '),'cafe-a-new-beginning');
+  assert.match(articleError({...article,draft:false,body:'  '}),/body/);
+  assert.match(articleError({...article,pubDate:'2026-02-31'}),/date/);
+  assert.match(articleError({...article,slug:'../escape'}),/slug/);
+  assert.equal(articleError({...article,body:''}),'');
+  assert.deepEqual(prepareArticle({...article,tags:[' Notes ','','Notes','Design']},false).tags,['Notes','Design']);
+  assert.equal(previewUrl('http://localhost:4321/','notes/story'),'http://localhost:4321/blog/notes/story/');
+});
+test('editor fields round-trip, slug updates preserve file identity, duplicate receives unique URL',async t=>{
+  const root=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'karma-editor-'));t.after(()=>fs.rm(root,{recursive:true,force:true}));
+  const store=new PostStore(root);
+  const created=await store.save({...article,featuredImage:'/media/cover.jpg',featuredImageAlt:'Green hills',seoTitle:'SEO story',metaDescription:'Search summary',category:'Notes'},true);
+  const updated=await store.save({...created,slug:'revised-story',draft:false});
+  assert.equal(updated.id,'story');assert.equal(updated.slug,'revised-story');
+  assert.equal(updated.featuredImage,'/media/cover.jpg');assert.equal(updated.seoTitle,'SEO story');assert.equal(updated.metaDescription,'Search summary');
+  const copy=await store.duplicate(updated.id,'story-copy',updated.revision);assert.equal(copy.slug,'story-copy');assert.equal(copy.draft,true);
+  await assert.rejects(store.save({...article,id:'collision',slug:'revised-story'},true),/slug already exists/);
+  await assert.rejects(store.save({...updated,body:'',draft:false}),/body/);
+  await assert.rejects(store.save({...updated,featuredImage:'javascript:alert(1)'}),/Featured image/);
+  const cleared=await store.save({...updated,featuredImage:'',seoTitle:'',metaDescription:''});assert.equal(cleared.featuredImage,'');
+});

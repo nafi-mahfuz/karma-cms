@@ -8,7 +8,9 @@ tags:
 ---
 Some ideas deserve more than a passing thought. They deserve a place to grow.
 
-## Make yourself at home
+```
+Make yourself at home
+```
 
 This journal is built with Astro. Every article is a simple Markdown file in your repository: easy to edit, easy to move, and entirely yours.
 
