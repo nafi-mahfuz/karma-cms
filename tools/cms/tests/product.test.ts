@@ -65,20 +65,58 @@ test('API settings apply immediately, serializes conflicting changes and keeps l
   assert.equal((await req('posts','POST',{...article,body:'x'.repeat(2*1024*1024)})).status,413);
   assert.equal((await posts.get('sample')).title,'Sample');
 });
-test('installer dry run, repeat init and remover preserve all application and user files',async t=>{
-  const {root}=await setup(t);const pkg={name:'journal',scripts:{dev:'astro dev',build:'astro build'},dependencies:{astro:'*'}};
-  await fs.writeFile(path.join(root,'package.json'),JSON.stringify(pkg,null,2));await fs.writeFile(path.join(root,'tools/cms/package.json'),JSON.stringify({scripts:{dev:'tsx server/index.ts'}}));
-  const protectedFiles={'src/content/blog/article.mdx':'user content','public/media/cover.png':png,'src/content.config.ts':'Astro schema','src/pages/index.astro':'Astro page','cms.settings.json':'settings','cms.media.json':'alt text','tools/cms/custom.txt':'custom CMS file'};
-  await fs.mkdir(path.join(root,'src/pages'));for(const [name,content]of Object.entries(protectedFiles))await fs.writeFile(path.join(root,name),content);
-  const original=await fs.readFile(path.join(root,'package.json'),'utf8');await manage('init',root,{dryRun:true});assert.equal(await fs.readFile(path.join(root,'package.json'),'utf8'),original);
-  await manage('init',root);await manage('init',root);let installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));assert.match(installed.scripts.cms,/tools\/cms/);
-  installed.scripts['cms:test']='my-custom-tests';await fs.writeFile(path.join(root,'package.json'),JSON.stringify(installed));
-  await manage('remove',root);await manage('remove',root);installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));assert.equal(installed.scripts.cms,undefined);assert.equal(installed.scripts['cms:test'],'my-custom-tests');assert.equal(installed.scripts.build,'astro build');assert.deepEqual(installed.dependencies,pkg.dependencies);
-  for(const [name,content]of Object.entries(protectedFiles))assert.equal(await fs.readFile(path.join(root,name),'utf8'),content);
+const exists=async(p:string)=>{try{await fs.stat(p);return true;}catch{return false;}};
+// A minimal CMS package template to copy from, including files that init must exclude.
+async function cmsSource(t:any){
+  const dir=await fs.mkdtemp(path.join(await fs.realpath(os.tmpdir()),'karma-src-'));t.after(()=>fs.rm(dir,{recursive:true,force:true}));
+  await fs.writeFile(path.join(dir,'package.json'),JSON.stringify({name:'karma-cms',scripts:{dev:'tsx server/index.ts'}}));
+  await fs.mkdir(path.join(dir,'server'));await fs.writeFile(path.join(dir,'server','index.ts'),'// server');
+  await fs.mkdir(path.join(dir,'node_modules'));await fs.writeFile(path.join(dir,'node_modules','junk.js'),'junk');
+  await fs.writeFile(path.join(dir,'scratch.tmp'),'tmp');
+  return dir;
+}
+test('init scaffolds the CMS (copying source, excluding deps) and is an idempotent dry-run-safe operation',async t=>{
+  const {root}=await setup(t);const source=await cmsSource(t);
+  const pkg={name:'journal',scripts:{dev:'astro dev',build:'astro build'},dependencies:{astro:'*'}};
+  await fs.writeFile(path.join(root,'package.json'),JSON.stringify(pkg,null,2));
+  const before=await fs.readFile(path.join(root,'package.json'),'utf8');
+  await manage('init',root,{dryRun:true,source});
+  assert.equal(await fs.readFile(path.join(root,'package.json'),'utf8'),before);
+  assert.equal(await exists(path.join(root,'cms.config.ts')),false);
+  assert.equal(await exists(path.join(root,'.karma-cms-install.json')),false);
+  await manage('init',root,{source});
+  assert.equal(await fs.readFile(path.join(root,'tools/cms/server/index.ts'),'utf8'),'// server');
+  assert.equal(await exists(path.join(root,'tools/cms/node_modules')),false);
+  assert.equal(await exists(path.join(root,'tools/cms/scratch.tmp')),false);
+  assert.match(await fs.readFile(path.join(root,'cms.config.ts'),'utf8'),/contentDir/);
+  const installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
+  assert.match(installed.scripts.cms,/tools\/cms/);assert.equal(installed.scripts.build,'astro build');
+  await fs.writeFile(path.join(root,'tools/cms/user-note.txt'),'keep me');
+  await manage('init',root,{source});
+  assert.equal(await fs.readFile(path.join(root,'tools/cms/user-note.txt'),'utf8'),'keep me');
 });
-test('installer refuses script collisions, symlinks and forged ownership without altering files',async t=>{
-  const {root}=await setup(t);await fs.writeFile(path.join(root,'tools/cms/package.json'),JSON.stringify({scripts:{dev:'cms'}}));
-  await fs.writeFile(path.join(root,'package.json'),JSON.stringify({scripts:{cms:'user-script'}}));await assert.rejects(manage('init',root),/already exists/);
+test('remove uninstalls the CMS but preserves blogs, media, categories, tags and custom scripts',async t=>{
+  const {root}=await setup(t);const source=await cmsSource(t);
+  const pkg={name:'journal',scripts:{dev:'astro dev',build:'astro build'},dependencies:{astro:'*'}};
+  await fs.writeFile(path.join(root,'package.json'),JSON.stringify(pkg,null,2));
+  const preserved={'src/content/blog/article.mdx':'user content','public/media/cover.png':png,'src/content.config.ts':'Astro schema','src/pages/index.astro':'Astro page','cms.taxonomies.json':'{"categories":[]}','cms.media.json':'alt text'};
+  await fs.mkdir(path.join(root,'src/pages'));for(const [n,c]of Object.entries(preserved))await fs.writeFile(path.join(root,n),c);
+  await manage('init',root,{source});
+  let installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
+  installed.scripts['cms:test']='my-custom-tests';await fs.writeFile(path.join(root,'package.json'),JSON.stringify(installed));
+  await fs.writeFile(path.join(root,'cms.settings.json'),'{}');
+  await manage('remove',root);await manage('remove',root); // second call is a no-op
+  installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
+  assert.equal(installed.scripts.cms,undefined);assert.equal(installed.scripts['cms:check'],undefined);
+  assert.equal(installed.scripts['cms:test'],'my-custom-tests');assert.equal(installed.scripts.build,'astro build');assert.deepEqual(installed.dependencies,pkg.dependencies);
+  for(const gone of ['tools/cms','cms.config.ts','cms.settings.json','.karma-cms-install.json'])assert.equal(await exists(path.join(root,gone)),false,`${gone} should be removed`);
+  for(const [n,c]of Object.entries(preserved))assert.equal(await fs.readFile(path.join(root,n),'utf8'),c,`${n} should be preserved`);
+});
+test('installer refuses script collisions, forged manifests and symlinked markers without altering files',async t=>{
+  const {root}=await setup(t);const source=await cmsSource(t);
+  await fs.writeFile(path.join(root,'package.json'),JSON.stringify({scripts:{cms:'user-script'}}));
+  await assert.rejects(manage('init',root,{source}),/already exists/);
+  assert.equal(await exists(path.join(root,'tools/cms/server/index.ts')),false);
   await fs.writeFile(path.join(root,'.karma-cms-install.json'),JSON.stringify({version:1,scripts:['build']}));await assert.rejects(manage('remove',root),/Unrecognized/);
   await fs.unlink(path.join(root,'.karma-cms-install.json'));await fs.symlink(path.join(root,'package.json'),path.join(root,'.karma-cms-install.json'));await assert.rejects(manage('remove',root),/non-regular/);
 });

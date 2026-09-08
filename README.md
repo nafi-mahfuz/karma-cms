@@ -66,7 +66,21 @@ tools/cms/
 
 The CMS binds only to `127.0.0.1:4000`. Host and Origin checks reject foreign web pages and DNS rebinding; mutations require a JSON request and custom header. No authentication service is used. Paths and symlinks are checked, and API bodies are limited to 2 MB. Vite serves only the local CMS source area. Do not expose this development server through a public proxy or tunnel.
 
-`npm run build` invokes only Astro. CMS UI, server, API, React and Tiptap dependencies are outside the Astro source/build graph. To remove Karma CMS, delete `tools/cms/` and `cms.config.ts`, then optionally remove the three `cms*` scripts from root `package.json`. The Astro application and blog content continue to work unchanged. The production install does not need the nested CMS dependencies.
+`npm run build` invokes only Astro. CMS UI, server, API, React and Tiptap dependencies are outside the Astro source/build graph. The Astro application and blog content continue to work unchanged. The production install does not need the nested CMS dependencies.
+
+## Install and remove (CLI)
+
+Karma ships a small CLI (`tools/cms/bin/karma-cms.mjs`, the `karma-cms` bin) for adding and removing the CMS in an Astro project.
+
+```sh
+karma-cms init          # scaffold the CMS into the current project
+karma-cms init --dry-run # print what init would do, changing nothing
+karma-cms remove        # uninstall the CMS, keeping everything you created
+```
+
+`init` vendors the CMS source into `tools/cms/`, creates `cms.config.ts` if absent, ensures `src/content/blog` and `public/media` exist, and registers the `cms`, `cms:check`, and `cms:test` scripts in `package.json`. It records what it did in `.karma-cms-install.json`. It never overwrites files that already exist, so re-running it is safe. After `init`, run `npm install --prefix tools/cms` and then `npm run cms`.
+
+`remove` reverses exactly that: it deletes `tools/cms/`, `cms.config.ts`, `cms.settings.json`, the three `cms*` scripts (only if unchanged), and the install manifest. It **never** touches what you created — your blogs, images and media (`src/content/`, `public/`), categories and tags (`cms.taxonomies.json`), media alt text (`cms.media.json`), your Astro schema, pages, and `dist/` all remain. With no install manifest present, `remove` does nothing. Both commands refuse symlinked targets and foreign-owned scripts.
 
 ## Verification
 

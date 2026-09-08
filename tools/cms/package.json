@@ -27,9 +27,24 @@
     "vite": "^8.2.2",
     "yaml": "^2.9.0"
   },
-  "name": "karma-cms-local",
-  "private": true,
+  "name": "karma-cms",
+  "version": "0.1.0",
+  "description": "A local-first, file-based visual CMS for Astro Markdown/MDX content.",
   "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "files": [
+    "bin",
+    "client",
+    "components",
+    "editor",
+    "lib",
+    "server",
+    "tests",
+    "scss.d.ts",
+    "tsconfig.json"
+  ],
   "scripts": {
     "dev": "tsx server/index.ts",
     "check": "tsc --noEmit",
