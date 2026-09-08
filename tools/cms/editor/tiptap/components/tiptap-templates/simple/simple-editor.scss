@@ -1,6 +1,6 @@
 .simple-editor-wrapper {
   --tt-toolbar-height: auto;
-  .tiptap-toolbar[data-variant="fixed"] { position: relative; flex-wrap: wrap; justify-content: flex-start; padding: 8px 14px; border-bottom: 1px solid #e1e6d9; height: auto; overflow: visible; }
+  .tiptap-toolbar[data-variant="fixed"] { position: sticky; top: 0; z-index: 20; flex-wrap: wrap; justify-content: flex-start; padding: 8px 14px; border-bottom: 1px solid #e1e6d9; height: auto; overflow: visible; background: var(--tt-toolbar-bg-color, #fff); }
   .prose-editor { min-height: 430px; font-family: Georgia, serif; font-size: 17px; line-height: 1.85; }
   .prose-editor:focus { outline: none; }
   .prose-editor > :first-child { margin-top: 0; }
