@@ -5,6 +5,8 @@ import { parseFrontmatter, patchFrontmatter, newMarkdown } from './frontmatter.j
 import { assertDirectory } from './paths.js';
 import type { Post, PostInput } from '../lib/types.js';
 
+// Karma stores content as MDX. Astro loads `**/*.mdx`; the CMS reads, writes, and lists only this extension.
+export const EXT = '.mdx';
 export class StoreError extends Error { constructor(message: string, public status = 400) { super(message); } }
 const revision = (raw: string) => createHash('sha256').update(raw).digest('hex');
 function split(raw: string) {
@@ -37,7 +39,7 @@ export class PostStore {
     const root = path.resolve(this.directory);
     await assertDirectory(root, 'Content path');
     let current = root;
-    const file = path.join(root, `${id}.md`);
+    const file = path.join(root, `${id}${EXT}`);
     current = root;
     for (const part of path.relative(root,file).split(path.sep)) {
       current = path.join(current, part);
@@ -62,7 +64,7 @@ export class PostStore {
       for (const entry of await fs.readdir(dir,{withFileTypes:true})) {
         if (entry.isSymbolicLink() || entry.name.startsWith('.')) continue;
         if (entry.isDirectory()) await walk(path.join(dir,entry.name),`${prefix}${entry.name}/`);
-        else if (entry.name.endsWith('.md')) ids.push(`${prefix}${entry.name.slice(0,-3)}`);
+        else if (entry.name.endsWith(EXT)) ids.push(`${prefix}${entry.name.slice(0,-EXT.length)}`);
       }
     };
     await this.file('_check');

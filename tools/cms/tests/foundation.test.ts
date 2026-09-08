@@ -32,9 +32,9 @@ test('detects nested Markdown and parses CRLF YAML without changing files',async
   const content=path.join(root,'articles');
   await fs.mkdir(path.join(content,'notes'));
   const raw='---\r\ntitle: Existing article\r\npubDate: 2026-09-08\r\ntags: [Astro, Notes]\r\n---\r\n# Original Markdown\r\n';
-  const file=path.join(content,'notes','existing.md');
+  const file=path.join(content,'notes','existing.mdx');
   await fs.writeFile(file,raw);
-  await fs.writeFile(path.join(content,'invalid.md'),'No frontmatter');
+  await fs.writeFile(path.join(content,'invalid.mdx'),'No frontmatter');
   await fs.writeFile(path.join(content,'ignore.txt'),'Not Markdown');
   const result=await new PostStore(content).list();
   assert.equal(result.posts.length,1);

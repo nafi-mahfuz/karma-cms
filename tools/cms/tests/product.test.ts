@@ -31,19 +31,19 @@ test('media deletion protects article references, unreadable content and externa
   let post=await posts.save({...article,featuredImage:uploaded.url},true);await assert.rejects(media.remove(item),/used/);
   post=await posts.save({...post,featuredImage:'',body:`![Cover](${uploaded.url})`});await assert.rejects(media.remove(item),/used/);
   post=await posts.save({...post,body:'Body'});
-  await fs.writeFile(path.join(root,config.contentDir,'broken.md'),'bad');await assert.rejects(media.remove(item),/unreadable/);await fs.unlink(path.join(root,config.contentDir,'broken.md'));
+  await fs.writeFile(path.join(root,config.contentDir,'broken.mdx'),'bad');await assert.rejects(media.remove(item),/unreadable/);await fs.unlink(path.join(root,config.contentDir,'broken.mdx'));
   await fs.appendFile(path.join(root,config.mediaDir,item.name),'changed');await assert.rejects(media.remove(item),/changed/);
   await media.remove((await media.list()).items[0]);assert.equal((await media.list()).items.length,0);
 });
 test('taxonomy catalogs merge article names, enforce usage, prevent duplicates and preserve article bytes',async t=>{
-  const {root,posts,taxonomy}=await setup(t);await posts.save(article,true);const raw=await fs.readFile(path.join(root,config.contentDir,'sample.md'),'utf8');
+  const {root,posts,taxonomy}=await setup(t);await posts.save(article,true);const raw=await fs.readFile(path.join(root,config.contentDir,'sample.mdx'),'utf8');
   let listing=await taxonomy.list();assert.equal(listing.categories[0].count,1);assert.equal(listing.tags[0].name,'Design');
   listing=await taxonomy.mutate({kind:'categories',name:'Travel',action:'create',revision:listing.revision});
   await assert.rejects(taxonomy.mutate({kind:'categories',name:'travel',action:'create',revision:listing.revision}),/already/);
   await assert.rejects(taxonomy.mutate({kind:'categories',name:'Notes',action:'delete',revision:listing.revision}),/used/);
   listing=await taxonomy.mutate({kind:'categories',name:'Travel',target:'Journeys',action:'rename',revision:listing.revision});
   listing=await taxonomy.mutate({kind:'categories',name:'Journeys',action:'delete',revision:listing.revision});assert.equal(listing.categories.length,1);
-  assert.equal(await fs.readFile(path.join(root,config.contentDir,'sample.md'),'utf8'),raw);
+  assert.equal(await fs.readFile(path.join(root,config.contentDir,'sample.mdx'),'utf8'),raw);
 });
 test('settings validate paths and previews, protect revisions and switch collections without moving data',async t=>{
   const {root,posts}=await setup(t);await posts.save(article,true);
@@ -68,7 +68,7 @@ test('API settings apply immediately, serializes conflicting changes and keeps l
 test('installer dry run, repeat init and remover preserve all application and user files',async t=>{
   const {root}=await setup(t);const pkg={name:'journal',scripts:{dev:'astro dev',build:'astro build'},dependencies:{astro:'*'}};
   await fs.writeFile(path.join(root,'package.json'),JSON.stringify(pkg,null,2));await fs.writeFile(path.join(root,'tools/cms/package.json'),JSON.stringify({scripts:{dev:'tsx server/index.ts'}}));
-  const protectedFiles={'src/content/blog/article.md':'user content','public/media/cover.png':png,'src/content.config.ts':'Astro schema','src/pages/index.astro':'Astro page','cms.settings.json':'settings','cms.media.json':'alt text','tools/cms/custom.txt':'custom CMS file'};
+  const protectedFiles={'src/content/blog/article.mdx':'user content','public/media/cover.png':png,'src/content.config.ts':'Astro schema','src/pages/index.astro':'Astro page','cms.settings.json':'settings','cms.media.json':'alt text','tools/cms/custom.txt':'custom CMS file'};
   await fs.mkdir(path.join(root,'src/pages'));for(const [name,content]of Object.entries(protectedFiles))await fs.writeFile(path.join(root,name),content);
   const original=await fs.readFile(path.join(root,'package.json'),'utf8');await manage('init',root,{dryRun:true});assert.equal(await fs.readFile(path.join(root,'package.json'),'utf8'),original);
   await manage('init',root);await manage('init',root);let installed=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));assert.match(installed.scripts.cms,/tools\/cms/);
